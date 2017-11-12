@@ -13,4 +13,5 @@ echo 'Restart services...'
   # Save cache
   # sudo systemctl restart mysql.service
   sudo systemctl restart isu.ruby.service
+  sudo systemctl restart isu.react.service
 echo 'Restarted!'
