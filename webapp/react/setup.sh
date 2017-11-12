@@ -6,4 +6,4 @@
 # Start react
 cd "$HOME/webapp/react"
 NODE_ENV=production npm run build
-SSL_KEY=/home/isucon/webapp/ssl/oreore.key SSL_CERT=/home/isucon/webapp/ssl/oreore.crt API=http://localhost:8080 node build/server.js
+sudo SSL_KEY=/home/isucon/webapp/ssl/oreore.key SSL_CERT=/home/isucon/webapp/ssl/oreore.crt API=http://localhost:8080 node build/server.js
