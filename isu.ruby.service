@@ -1,0 +1,13 @@
+[Unit]
+Description=isu-app 
+
+[Service]
+Type=simple
+User=isucon
+Group=isucon
+WorkingDirectory=/home/isucon/webapp/ruby
+EnvironmentFile=/home/isucon/env.sh
+ExecStart=/usr/local/bin/bundle exec thin start --port 8080 -A rack -R config.ru -e production
+
+[Install]
+WantedBy=multi-user.target
