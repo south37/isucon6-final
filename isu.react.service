@@ -7,7 +7,7 @@ User=isucon
 Group=isucon
 WorkingDirectory=/home/isucon/webapp/react
 EnvironmentFile=/home/isucon/env.sh
-ExecStartPre=NODE_ENV=production npm run build
+ExecStartPre=/usr/bin/npm run build
 ExecStart=/usr/bin/node build/server.js
 
 [Install]
