@@ -15,6 +15,9 @@
 # rotate_and_cp.sh
 # webapp/
 
+.babel.json
+.v8flags.4.5.103.35.isucon.json
+
 .wget-hsts
 # Added by south37
 .mysql_history
