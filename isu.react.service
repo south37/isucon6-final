@@ -1,0 +1,14 @@
+[Unit]
+Description=isu react
+
+[Service]
+Type=simple
+User=isucon
+Group=isucon
+WorkingDirectory=/home/isucon/webapp/react
+EnvironmentFile=/home/isucon/env.sh
+ExecStartPre=NODE_ENV=production npm run build
+ExecStart=/usr/bin/node build/server.js
+
+[Install]
+WantedBy=multi-user.target
