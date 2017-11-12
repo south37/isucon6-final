@@ -17,8 +17,6 @@
 
 .wget-hsts
 # Added by south37
-.gitignore
-.gitconfig
 .mysql_history
 .viminfo
 .profile
