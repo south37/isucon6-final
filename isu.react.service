@@ -3,8 +3,6 @@ Description=isu react
 
 [Service]
 Type=simple
-User=isucon
-Group=isucon
 WorkingDirectory=/home/isucon/webapp/react
 EnvironmentFile=/home/isucon/env.sh
 ExecStartPre=/usr/bin/npm run build
