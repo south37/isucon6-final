@@ -10,3 +10,4 @@ NODE_ENV=production
 SSL_KEY=/home/isucon/webapp/ssl/oreore.key 
 SSL_CERT=/home/isucon/webapp/ssl/oreore.crt 
 API=http://localhost:8080
+REACT_PORT=3000

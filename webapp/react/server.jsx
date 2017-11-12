@@ -1,5 +1,5 @@
 import express from 'express';
-import https from 'https';
+// import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
@@ -25,6 +25,9 @@ if (!process.env.SSL_KEY) {
 }
 if (!process.env.SSL_CERT) {
   throw 'Please set environment variable SSL_CERT=/path/to/server.crt';
+}
+if (!process.env.REACT_PORT) {
+  throw 'Please set environment variable REACT_PORT=...';
 }
 
 const options = {
@@ -104,8 +107,9 @@ app.get('*', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 443;
-https.createServer(options, app).listen(PORT);
+const PORT = process.env.REACT_PORT;
+app.listen(PORT);
+// https.createServer(options, app).listen(PORT);
 
 function createHtml(appHtml, scriptTag, csrfToken) {
   return `<!DOCTYPE html>
