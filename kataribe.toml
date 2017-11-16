@@ -44,3 +44,7 @@ duration_index = 10
 
 # You can aggregate requests by regular expression
 # For overview of regexp syntax: https://golang.org/pkg/regexp/syntax/
+
+[[bundle]]
+regexp = '^(GET|HEAD) /img/'
+name = "img"
