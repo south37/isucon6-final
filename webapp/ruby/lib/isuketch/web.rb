@@ -58,11 +58,34 @@ module Isuketch
       end
 
       def get_room(dbh, room_id)
+        room_redis = get_room_redis
+        room_redis ? room_redis : get_room_db(dbh, room_id)
+      end
+
+      def initialize_rooms
+        rooms = select_all(dbh, %|
+          SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
+          FROM `rooms`
+        |)
+        mset_args = rooms.map { |room| [redis_room_key(room[:id]), room.to_json] }.flatten
+        redis.mset(*mset_args)
+      end
+
+      def get_room_db(dbh, room_id)
         select_one(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
           FROM `rooms`
           WHERE `id` = ?
         |, [room_id])
+      end
+
+      def get_room_redis(room_id)
+        json = redis.get(redis_room_key)
+        json ? JSON.parse(json) : nil
+      end
+
+      def redis_room_key(room_id)
+        "room:#{room_id}"
       end
 
       def get_strokes(dbh, room_id, greater_than_id)
