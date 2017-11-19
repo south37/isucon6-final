@@ -4,6 +4,10 @@ require 'time'
 require 'mysql2'
 require 'sinatra/base'
 
+require 'redis'
+      
+Redis.current = Redis.new(host: ENV['REDIS_HOST'])
+
 module Isuketch
   class Web < ::Sinatra::Base
     JSON.load_default_options[:symbolize_names] = true
