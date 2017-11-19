@@ -46,5 +46,21 @@ duration_index = 10
 # For overview of regexp syntax: https://golang.org/pkg/regexp/syntax/
 
 [[bundle]]
-regexp = '^(GET|HEAD) /img/'
-name = "img"
+regexp = 'GET /img/'
+name = "GET /img/:id"
+
+[[bundle]]
+regexp = 'HEAD /img/'
+name = "HEAD /img/:id"
+
+[[bundle]]
+regexp = 'POST /api/strokes/rooms/[^/]*'
+name = "POST /api/strokes/rooms/:id"
+
+[[bundle]]
+regexp = 'GET /api/stream/rooms/[^/]*'
+name = "GET /api/stream/rooms/:id"
+
+[[bundle]]
+regexp = 'GET /rooms/[^/.]*'
+name = "GET /rooms/:id"
