@@ -296,7 +296,11 @@ EOS
 
       content_type 'image/svg+xml; charset=utf-8'
       etag key, kind: :weak
-      last_modified(strokes.last[:created_at]) if strokes.size != 0
+      if strokes.size != 0
+        last_modified(strokes.last[:created_at])
+      else
+        last_modified(room[:created_at])
+      end
       body
     end
 
