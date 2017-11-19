@@ -9,5 +9,5 @@ if [ "$1" = "--bundle" ]; then
 fi
 
 echo 'Restart isu.ruby...'
-sudo systemctl restart isu.ruby.service
+echo "isucon" | sudo -S systemctl restart isu.ruby.service
 echo 'Restarted isu.ruby!'
