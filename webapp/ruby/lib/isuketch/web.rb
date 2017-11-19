@@ -86,6 +86,16 @@ module Isuketch
         |, [room_id, greater_than_id])
       end
 
+      def get_stroke_count(dbh, room_id, greater_than_id)
+        select_one(dbh, %|
+          SELECT COUNT(*)
+          FROM `strokes`
+          WHERE `room_id` = ?
+            AND `id` > ?
+          ORDER BY `id` ASC;
+        |, [room_id, greater_than_id])
+      end
+
       def create_token
         dbh = get_dbh
         dbh.query(%|
@@ -544,7 +554,7 @@ EOS
 
       room_id = params['id']
       dbh = get_dbh()
-      stroke_count = get_strokes(dbh, room_id, 0).count
+      stroke_count = get_stroke_count(dbh, room_id, 0)
       key = "room_html:#{room_id},#{stroke_count}"
       cache = redis.get(key)
       if cache
