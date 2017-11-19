@@ -27,7 +27,7 @@ for i in ${NGINX_HOSTS[@]}; do
   echo ""
   HOST=$(echo "HOST${i}")
   HOSTNAME=$(echo "HOSTNAME${i}")
-  echo "${HOSTNAME}"
+  echo "${HOSTNAME}: ${HOST}"
   ssh "isucon@${HOST}" "${NGINX_COMMAND}"
 done
 echo "Deployed nginx!"
@@ -41,7 +41,7 @@ for i in ${WEB_HOSTS[@]}; do
   echo ""
   HOST=$(echo "HOST${i}")
   HOSTNAME=$(echo "HOSTNAME${i}")
-  echo "${HOSTNAME}"
-  echo $i; ssh "isucon@${HOST}" "${WEB_COMMAND}"
+  echo "${HOSTNAME}: ${HOST}"
+  ssh "isucon@${HOST}" "${WEB_COMMAND}"
 done
 echo "Deployed app!"
