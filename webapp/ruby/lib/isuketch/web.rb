@@ -236,8 +236,6 @@ module Isuketch
       dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
 
       initialize_points(dbh)
-
-      dbh.close
     end
 
     post '/api/csrf_token' do
