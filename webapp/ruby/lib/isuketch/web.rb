@@ -21,24 +21,26 @@ module Isuketch
 
     helpers do
       def get_dbh
-        host = ENV['MYSQL_HOST'] || 'localhost'
-        port = ENV['MYSQL_PORT'] || '3306'
-        user = ENV['MYSQL_USER'] || 'root'
-        pass = ENV['MYSQL_PASS'] || ''
-        name = 'isuketch'
-        mysql = Mysql2::Client.new(
-          username: user,
-          password: pass,
-          database: name,
-          host: host,
-          port: port,
-          encoding: 'utf8mb4',
-          init_command: %|
-            SET TIME_ZONE = 'UTC'
-          |,
-        )
-        mysql.query_options.update(symbolize_keys: true)
-        mysql
+        Thread.current[:dbh] ||= begin
+          host = ENV['MYSQL_HOST'] || 'localhost'
+          port = ENV['MYSQL_PORT'] || '3306'
+          user = ENV['MYSQL_USER'] || 'root'
+          pass = ENV['MYSQL_PASS'] || ''
+          name = 'isuketch'
+          mysql = Mysql2::Client.new(
+            username: user,
+            password: pass,
+            database: name,
+            host: host,
+            port: port,
+            encoding: 'utf8mb4',
+            init_command: %|
+              SET TIME_ZONE = 'UTC'
+            |,
+          )
+          mysql.query_options.update(symbolize_keys: true)
+          mysql
+        end
       end
 
       def redis
@@ -390,7 +392,7 @@ EOS
       room[:strokes] = strokes
       room[:watcher_count] = get_watcher_count(dbh, room[:id])
 
-      dbh.close
+      # dbh.close  cache db connection, so close is unecessary
       content_type :json
       JSON.generate(
         room: to_room_json(room)
