@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo 'Rotate log file...'
-  ./rotate.sh
+  "$HOME/scripts/rotate.sh"
 echo 'Rotated log file!'
 
 echo 'Update config file...'
