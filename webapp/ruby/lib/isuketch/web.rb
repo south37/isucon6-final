@@ -5,6 +5,7 @@ require 'mysql2'
 require 'sinatra/base'
 
 require 'redis'
+require 'faraday'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
@@ -20,6 +21,14 @@ module Isuketch
     end
 
     helpers do
+      def react
+        @react ||= Faraday.new(:url => 'http://localhost:3000')
+      end
+
+      def redis
+        @redis ||= Redis.current
+      end
+
       def get_dbh
         Thread.current[:dbh] ||= begin
           host = ENV['MYSQL_HOST'] || 'localhost'
@@ -75,6 +84,34 @@ module Isuketch
             AND `id` > ?
           ORDER BY `id` ASC;
         |, [room_id, greater_than_id])
+      end
+
+      def get_stroke_count(dbh, room_id, greater_than_id)
+        select_one(dbh, %|
+          SELECT COUNT(*)
+          FROM `strokes`
+          WHERE `room_id` = ?
+            AND `id` > ?
+          ORDER BY `id` ASC;
+        |, [room_id, greater_than_id])
+      end
+
+      def create_token
+        dbh = get_dbh
+        dbh.query(%|
+          INSERT INTO `tokens` (`csrf_token`)
+          VALUES
+          (SHA2(CONCAT(RAND(), UUID_SHORT()), 256))
+        |)
+
+        id = dbh.last_id
+        token = select_one(dbh, %|
+          SELECT `id`, `csrf_token`, `created_at`
+          FROM `tokens`
+          WHERE `id` = ?
+        |, [id])
+
+        token
       end
 
       def to_room_json(room)
@@ -241,20 +278,7 @@ module Isuketch
     end
 
     post '/api/csrf_token' do
-      dbh = get_dbh
-      dbh.query(%|
-        INSERT INTO `tokens` (`csrf_token`)
-        VALUES
-        (SHA2(CONCAT(RAND(), UUID_SHORT()), 256))
-      |)
-
-      id = dbh.last_id
-      token = select_one(dbh, %|
-        SELECT `id`, `csrf_token`, `created_at`
-        FROM `tokens`
-        WHERE `id` = ?
-      |, [id])
-
+      token = create_token
       content_type :json
       JSON.generate(
         token: token[:csrf_token],
@@ -528,6 +552,27 @@ EOS
 
         writer.close
       end
+    end
+
+    get "/rooms/:id" do
+      content_type :html
+
+      room_id = params['id']
+      dbh = get_dbh()
+      stroke_count = get_stroke_count(dbh, room_id, 0)
+      key = "room_html:#{room_id},#{stroke_count}"
+      cache = redis.get(key)
+      if cache
+        token = create_token
+        csrf_token = token[:csrf_token]
+        cache.gsub!(/"csrfToken": ".*"/, "\"csrfToken\": \"#{csrf_token}\"")
+        return cache
+      end
+
+      res = react.get("rooms/#{room_id}")
+      html = res.body.force_encoding("UTF-8")
+      redis.set(key, html)
+      html
     end
   end
 end
