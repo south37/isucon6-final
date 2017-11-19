@@ -7,7 +7,7 @@ User=isucon
 Group=isucon
 WorkingDirectory=/home/isucon/webapp/ruby
 EnvironmentFile=/home/isucon/env.sh
-ExecStart=/usr/local/bin/bundle exec puma --port 8080 -t 10 -e production config.ru
+ExecStart=/usr/local/bin/bundle exec puma --port 8080 -t 20 -e production config.ru
 
 [Install]
 WantedBy=multi-user.target
