@@ -236,6 +236,8 @@ module Isuketch
       dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
 
       initialize_points(dbh)
+
+      dbh.close
     end
 
     post '/api/csrf_token' do
@@ -294,6 +296,7 @@ EOS
 
       content_type 'image/svg+xml; charset=utf-8'
       etag key, kind: :weak
+      last_modified(strokes.last[:created_at]) if strokes.size != 0
       body
     end
 
