@@ -9,5 +9,5 @@ bundle install --jobs 4
 
 # Start ruby
 # MYSQL_HOST is web03. 54.199.234.200
-cd "$HOME/webapp/ruby"
-MYSQL_HOST=54.199.234.200 bundle exec thin start --port 8080 -A rack -R config.ru -e production
+# cd "$HOME/webapp/ruby"
+# MYSQL_HOST=54.199.234.200 bundle exec thin start --port 8080 -A rack -R config.ru -e production
