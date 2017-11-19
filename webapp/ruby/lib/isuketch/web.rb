@@ -391,7 +391,7 @@ EOS
       begin
         dbh.query(%|BEGIN|)
 
-        create_room_redis(posted_room)
+        room_id = create_room_redis(posted_room)
 
         stmt = dbh.prepare(%|
           INSERT INTO `room_owners`
