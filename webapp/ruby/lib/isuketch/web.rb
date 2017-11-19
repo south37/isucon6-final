@@ -175,6 +175,7 @@ module Isuketch
       end
 
       def get_points(stroke_ids)
+        return [] if stroke_ids.size == 0
         orgs = stroke_ids.map{|stroke_id| "points:#{stroke_id}" }
         datas = redis.mget *orgs
         datas.each_with_index.map do |data, index|
