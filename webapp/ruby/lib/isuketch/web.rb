@@ -25,6 +25,10 @@ module Isuketch
         @react ||= Faraday.new(:url => 'http://localhost:3000')
       end
 
+      def redis
+        @redis ||= Redis.current
+      end
+
       def get_dbh
         host = ENV['MYSQL_HOST'] || 'localhost'
         port = ENV['MYSQL_PORT'] || '3306'
@@ -454,9 +458,17 @@ EOS
     end
 
     get "/rooms/:id" do
-      res = react.get("rooms/#{params['id']}")
       content_type :html
-      res.body
+
+      room_id = params['id']
+      key = to_room_json(room)
+      cache = redis.get(key)
+      return cache if cache
+
+      res = react.get("rooms/#{room_id}")
+      html = res.body
+      redis.set(key, html)
+      html
     end
   end
 end
