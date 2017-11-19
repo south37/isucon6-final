@@ -81,6 +81,24 @@ module Isuketch
         |, [room_id, greater_than_id])
       end
 
+      def create_token
+        dbh = get_dbh
+        dbh.query(%|
+          INSERT INTO `tokens` (`csrf_token`)
+          VALUES
+          (SHA2(CONCAT(RAND(), UUID_SHORT()), 256))
+        |)
+
+        id = dbh.last_id
+        token = select_one(dbh, %|
+          SELECT `id`, `csrf_token`, `created_at`
+          FROM `tokens`
+          WHERE `id` = ?
+        |, [id])
+
+        token
+      end
+
       def to_room_json(room)
         {
           id: room[:id].to_i,
@@ -161,20 +179,7 @@ module Isuketch
     end
 
     post '/api/csrf_token' do
-      dbh = get_dbh
-      dbh.query(%|
-        INSERT INTO `tokens` (`csrf_token`)
-        VALUES
-        (SHA2(CONCAT(RAND(), UUID_SHORT()), 256))
-      |)
-
-      id = dbh.last_id
-      token = select_one(dbh, %|
-        SELECT `id`, `csrf_token`, `created_at`
-        FROM `tokens`
-        WHERE `id` = ?
-      |, [id])
-
+      token = create_token
       content_type :json
       JSON.generate(
         token: token[:csrf_token],
@@ -467,7 +472,12 @@ EOS
       room_json_str = to_room_json(room).to_json
       key = "room_html:#{Digest::MD5.hexdigest(room_json_str)}"
       cache = redis.get(key)
-      return cache if cache
+      if cache
+        token = create_token
+        csrf_token = cache.token[:csrf_token]
+        cache.gsub!(/"csrfToken": ".*"/, "\"csrfToken\": \"#{csrf_token}\"")
+        return cache
+      end
 
       res = react.get("rooms/#{room_id}")
       html = res.body.force_encoding("UTF-8")
