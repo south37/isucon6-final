@@ -89,15 +89,15 @@ module Isuketch
         room_redis ? room_redis : get_room_db(dbh, room_id)
       end
 
-      def initialize_rooms
+      def initialize_rooms(dbh)
         rooms = select_all(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
           FROM `rooms`
           ORDER BY `id`
-        |)
+        |, [])
         mset_args = rooms.map { |room| [redis_room_key(room[:id]), room.to_json] }.flatten
         redis.mset(*mset_args)
-        reis.set(redis_room_id_key, rooms.last[:id])
+        redis.set(redis_room_id_key, rooms.last[:id])
       end
 
       def get_room_db(dbh, room_id)
@@ -288,6 +288,7 @@ module Isuketch
       dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
 
       initialize_points(dbh)
+      initialize_rooms(dbh)
     end
 
     post '/api/csrf_token' do
