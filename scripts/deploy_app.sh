@@ -12,6 +12,11 @@ echo 'Restart services...'
   # sudo systemctl restart redis.service
   # Save cache
   # sudo systemctl restart mysql.service
+  echo 'Restart isu.ruby...'
   sudo systemctl restart isu.ruby.service
+  echo 'Restarted isu.ruby!'
+
+  echo 'Restart isu.react...'
   sudo systemctl restart isu.react.service
+  echo 'Restarted isu.react!'
 echo 'Restarted!'
