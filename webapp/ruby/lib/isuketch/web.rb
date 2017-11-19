@@ -171,6 +171,48 @@ module Isuketch
       )
     end
 
+    get '/img/:id' do |id|
+      dbh = get_dbh()
+      room = get_room(dbh, id)
+      unless room
+        halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
+          error: 'この部屋は存在しません。'
+        ))
+      end
+
+      strokes = get_strokes(dbh, room[:id], 0)
+      strokes.each do |stroke|
+        stroke[:points] = get_stroke_points(dbh, stroke[:id])
+      end
+      room[:strokes] = strokes
+
+      key = "#{room[:id]}:#{strokes.size}"
+
+      body = '<?xml version="1.0" standalone="no"?>' +
+        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
+
+      body += <<EOS
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="#{room[:canvas_width]}" height="#{room[:canvas_height]}" style="width:#{room[:canvas_width]}px;height:#{room[:canvas_height]}px;background-color:white;" viewBox="0 0 #{room[:canvas_width]} #{room[:canvas_height]}">
+EOS
+      strokes.each do |stroke|
+        points = get_stroke_points(dbh, stroke[:id])
+        points_str = points.map do |point|
+          x = (point[:x] == point[:x].to_i) ? point[:x].to_i : sprintf("%.4f", point[:x])
+          y = (point[:y] == point[:y].to_i) ? point[:y].to_i : sprintf("%.4f", point[:y])
+          "#{x},#{y}"
+        end.join(" ")
+        body += <<EOS
+<polyline id="#{stroke[:id]}" stroke="rgba(#{stroke[:red]},#{stroke[:green]},#{stroke[:blue]},#{sprintf("%.1f", stroke[:alpha])})" stroke-width="#{stroke[:width]}" stroke-linecap="round" stroke-linejoin="round" fill="none" points="#{points_str}"></polyline>
+EOS
+      end
+      body = body.gsub("\n", "")
+      body += "</svg>"
+
+      content_type 'image/svg+xml; charset=utf-8'
+      etag key, kind: :weak
+      body
+    end
+
     get '/api/rooms' do
       dbh = get_dbh
       results = select_all(dbh, %|
