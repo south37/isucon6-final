@@ -460,9 +460,9 @@ EOS
     get "/rooms/:id" do
       content_type :html
 
-      dbh = get_dbh()
-      room = get_room(dbh,room_id)
       room_id = params['id']
+      dbh = get_dbh()
+      room = get_room(dbh, room_id)
       key = to_room_json(room)
       cache = redis.get(key)
       return cache if cache
