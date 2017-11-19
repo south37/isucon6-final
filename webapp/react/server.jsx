@@ -13,6 +13,7 @@ import fetchJson from './util/fetch-json';
 import proxy from 'http-proxy-middleware';
 import Canvas from './components/Canvas';
 import SSRCaching from "react-ssr-caching";
+import ReactDOM from 'react-dom/server';
 
 // SSR Cache
 const cacheConfig = {
