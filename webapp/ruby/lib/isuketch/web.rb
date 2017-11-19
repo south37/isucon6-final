@@ -277,7 +277,7 @@ module Isuketch
       body += <<EOS
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="#{room[:canvas_width]}" height="#{room[:canvas_height]}" style="width:#{room[:canvas_width]}px;height:#{room[:canvas_height]}px;background-color:white;" viewBox="0 0 #{room[:canvas_width]} #{room[:canvas_height]}">
 EOS
-      strokes.each do |stroke|
+      strokes.each_with_index do |stroke, index|
         points = points_arr[index]
         points_str = points.map do |point|
           x = (point[:x] == point[:x].to_i) ? point[:x].to_i : sprintf("%.4f", point[:x])
