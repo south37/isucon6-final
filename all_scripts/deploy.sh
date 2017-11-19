@@ -15,10 +15,10 @@ fi
 
 NGINX_COMMAND="hostname && git pull origin ${TARGET} && /home/isucon/scripts/deploy_nginx.sh"
 NGINX_HOSTS="${HOST2}"
-# for i in ${WEB_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${NGINX_COMMAND}"; done
 echo "${NGINX_COMMAND}"
+for i in ${NGINX_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${NGINX_COMMAND}"; done
 
 WEB_COMMAND="hostname && git pull origin ${TARGET} && /home/isucon/scripts/deploy_app.sh"
 WEB_HOSTS="${HOST1} ${HOST2} ${HOST4} ${HOST5}"
-# for i in ${WEB_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${WEB_COMMAND}"; done
 echo "${WEB_COMMAND}"
+for i in ${WEB_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${WEB_COMMAND}"; done
