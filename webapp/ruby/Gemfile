@@ -5,6 +5,7 @@ gem 'sinatra'
 # gem 'thin'
 gem 'puma'
 gem 'redis'
+gem 'faraday'
 
 group :development do
   gem 'sinatra-contrib', require: nil
