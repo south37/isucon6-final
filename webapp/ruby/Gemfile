@@ -4,6 +4,7 @@ gem 'mysql2'
 gem 'sinatra'
 # gem 'thin'
 gem 'puma'
+gem 'redis'
 
 group :development do
   gem 'sinatra-contrib', require: nil
