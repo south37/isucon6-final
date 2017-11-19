@@ -5,7 +5,8 @@ require 'mysql2'
 require 'sinatra/base'
 
 require 'redis'
-      
+require 'faraday'
+
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
 module Isuketch
@@ -20,6 +21,10 @@ module Isuketch
     end
 
     helpers do
+      def react
+        @react ||= Faraday.new(:url => 'http://localhost:3000')
+      end
+
       def get_dbh
         host = ENV['MYSQL_HOST'] || 'localhost'
         port = ENV['MYSQL_PORT'] || '3306'
@@ -404,6 +409,12 @@ module Isuketch
 
         writer.close
       end
+    end
+
+    get "/rooms/:id" do
+      res = react.get("rooms/#{params['id']}")
+      content_type :html
+      res.body
     end
   end
 end
