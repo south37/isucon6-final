@@ -23,3 +23,5 @@ end
 
 # ------ Test -------
 c.get "/initialize"
+c.get "/rooms"
+c.get "/rooms/1"
