@@ -465,7 +465,7 @@ EOS
       dbh = get_dbh()
       room = get_room(dbh, room_id)
       room_json_str = to_room_json(room).to_json
-      key = Digest::MD5.hexdigest(room_json_str)
+      key = "room_html:#{Digest::MD5.hexdigest(room_json_str)}"
       cache = redis.get(key)
       return cache if cache
 
