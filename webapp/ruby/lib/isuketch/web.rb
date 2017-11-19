@@ -57,8 +57,35 @@ module Isuketch
         stmt.close
       end
 
+      def create_room_db(dbh, params)
+        stmt = dbh.prepare(%|
+          INSERT INTO `rooms`
+          (`name`, `canvas_width`, `canvas_height`)
+          VALUES
+          (?, ?, ?)
+        |)
+        stmt.execute(parms[:name], params[:canvas_width], params[:canvas_height])
+        room_id = dbh.last_id
+        stmt.close
+        room_id
+      end
+
+      def create_room_redis(params)
+        room_id = incr_room_id
+        redis.set(redis_room_key(room_id), params.to_json)
+        room_id
+      end
+
+      def incr_room_id
+        redis.incr(redis_room_id_key)
+      end
+
+      def redis_room_id_key
+        "room_id"
+      end
+
       def get_room(dbh, room_id)
-        room_redis = get_room_redis
+        room_redis = get_room_redis(room_id)
         room_redis ? room_redis : get_room_db(dbh, room_id)
       end
 
@@ -66,9 +93,11 @@ module Isuketch
         rooms = select_all(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
           FROM `rooms`
+          ORDER BY `id`
         |)
         mset_args = rooms.map { |room| [redis_room_key(room[:id]), room.to_json] }.flatten
         redis.mset(*mset_args)
+        reis.set(redis_room_id_key, rooms.last[:id])
       end
 
       def get_room_db(dbh, room_id)
@@ -80,7 +109,7 @@ module Isuketch
       end
 
       def get_room_redis(room_id)
-        json = redis.get(redis_room_key)
+        json = redis.get(redis_room_key(room_id))
         json ? JSON.parse(json) : nil
       end
 
@@ -362,15 +391,7 @@ EOS
       begin
         dbh.query(%|BEGIN|)
 
-        stmt = dbh.prepare(%|
-          INSERT INTO `rooms`
-          (`name`, `canvas_width`, `canvas_height`)
-          VALUES
-          (?, ?, ?)
-        |)
-        stmt.execute(posted_room[:name], posted_room[:canvas_width], posted_room[:canvas_height])
-        room_id = dbh.last_id
-        stmt.close
+        create_room_redis(posted_room)
 
         stmt = dbh.prepare(%|
           INSERT INTO `room_owners`
