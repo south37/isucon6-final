@@ -179,13 +179,12 @@ module Isuketch
         datas = redis.mget *orgs
         datas.each_with_index.map do |data, index|
           points = JSON.parse(data, symbolize_names: true)
-          points.map{|point| point[:stroke_id] = stroke_ids[index];point}
+          points
         end
       end
 
       def get_stroke_points(dbh, stroke_id)
-        points = JSON.parse(redis.get("points:#{stroke_id}"), symbolize_names: true)
-        points.map{|point| point[:stroke_id] = stroke_id;point}
+        JSON.parse(redis.get("points:#{stroke_id}"), symbolize_names: true)
       end
 
       def set_points(stroke_id, points)
@@ -194,6 +193,8 @@ module Isuketch
         points = points.map do |point|
           start_points_key += 1
           point[:id] = start_points_key
+          point[:stroke_id] = stroke_id
+          point
         end
         redis.set "points:#{stroke_id}", points.to_json
         points
@@ -452,17 +453,8 @@ EOS
         stroke_id = dbh.last_id
         stmt.close
 
-        set_stroke_points(stroke_id, posted_stroke)
-        posted_stroke[:points].each do |point|
-          stmt = dbh.prepare(%|
-            INSERT INTO `points`
-            (`stroke_id`, `x`, `y`)
-            VALUES
-            (?, ?, ?)
-          |)
-          stmt.execute(stroke_id, point[:x], point[:y])
-          stmt.close
-        end
+        points = set_points(stroke_id, posted_stroke[:points])
+        puts points
       rescue
         dbh.query(%| ROLLBACK |)
         halt(500, {'Content-Type' => 'application/json'}, JSON.generate(
@@ -477,7 +469,7 @@ EOS
         FROM `strokes`
         WHERE `id`= ?
       |, [stroke_id])
-      stroke[:points] = get_stroke_points(dbh, stroke_id)
+      stroke[:points] = points
 
       content_type :json
       JSON.generate(
