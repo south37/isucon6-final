@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LOGFILE="`date +"%Y%m%d%H%M%S"`_access.log"
-sudo mv "/var/log/nginx/access.log" "/var/log/nginx/$LOGFILE"
-sudo cp "/var/log/nginx/$LOGFILE" "log/$LOGFILE"
-sudo chown isucon:isucon "log/$LOGFILE"
-sudo systemctl restart nginx
+echo "isucon" | sudo -S mv "/var/log/nginx/access.log" "/var/log/nginx/$LOGFILE"
+echo "isucon" | sudo -S cp "/var/log/nginx/$LOGFILE" "log/$LOGFILE"
+echo "isucon" | sudo -S chown isucon:isucon "log/$LOGFILE"
+echo "isucon" | sudo -S systemctl restart nginx
