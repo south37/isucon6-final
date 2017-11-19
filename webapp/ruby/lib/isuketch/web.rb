@@ -5,7 +5,7 @@ require 'mysql2'
 require 'sinatra/base'
 
 require 'redis'
-      
+
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
 module Isuketch
@@ -39,6 +39,10 @@ module Isuketch
         )
         mysql.query_options.update(symbolize_keys: true)
         mysql
+      end
+
+      def redis
+        @redis ||= Redis.current
       end
 
       def select_one(dbh, sql, binds)
@@ -120,13 +124,81 @@ module Isuketch
         |, [csrf_token])
       end
 
+      def initialize_points(dbh)
+        s = Time.now
+
+        orgs = nil
+        begin
+          # 2sくらい
+          stroke_hash_data = File.read("initial_points_hash.json")
+          orgs = JSON.parse(stroke_hash_data)
+        rescue
+
+          # 6.877798s
+          points = dbh.prepare('SELECT * FROM points order by id').execute
+
+          puts "finished get points: #{Time.now - s}"
+
+          # 3.837764s
+          stroke_hash = {}
+          points.each do |point|
+            stroke_hash[point[:stroke_id]] ||= []
+            stroke_hash[point[:stroke_id]] << {id: point[:id], x: point[:x], y: point[:y]}
+          end
+
+          puts "finished create hash: #{Time.now - s}"
+
+          # 9sくらい
+          orgs = []
+          stroke_hash.each do |stroke_id, arr|
+            orgs << ["points:#{stroke_id}", arr.to_json]
+          end
+          puts "finished create orgs: #{Time.now - s}"
+
+          File.write("initial_points_hash.json", orgs.to_json)
+        end
+
+        # 2s
+        redis.mset *orgs.flatten
+
+        # 42s(local) 150万件
+        # redis.pipelined do
+        #   points.each do |point|
+        #     redis.zadd "points:#{point[:stroke_id]}", point[:id], "#{point[:x]},#{point[:y]}"
+        #   end
+        # end
+
+        last_point = dbh.prepare('SELECT * FROM points order by id DESC limit 1').execute.first
+        redis.set "points_key", last_point[:id]
+
+        puts "finished initialize_points: #{Time.now - s}"
+      end
+
+      def get_points(stroke_ids)
+        return [] if stroke_ids.size == 0
+        orgs = stroke_ids.map{|stroke_id| "points:#{stroke_id}" }
+        datas = redis.mget *orgs
+        datas.each_with_index.map do |data, index|
+          points = JSON.parse(data, symbolize_names: true)
+          points
+        end
+      end
+
       def get_stroke_points(dbh, stroke_id)
-        select_all(dbh, %|
-          SELECT `id`, `stroke_id`, `x`, `y`
-          FROM `points`
-          WHERE `stroke_id` = ?
-          ORDER BY `id` ASC
-        |, [stroke_id])
+        JSON.parse(redis.get("points:#{stroke_id}"), symbolize_names: true)
+      end
+
+      def set_points(stroke_id, points)
+        points_key = redis.incrby "points_key", points.size
+        start_points_key = points_key.to_i - points.size
+        points = points.map do |point|
+          start_points_key += 1
+          point[:id] = start_points_key
+          point[:stroke_id] = stroke_id
+          point
+        end
+        redis.set "points:#{stroke_id}", points.to_json
+        points
       end
 
       def get_watcher_count(dbh, room_id)
@@ -148,6 +220,22 @@ module Isuketch
       ensure
         stmt.close
       end
+    end
+
+    get '/initialize' do
+      redis.flushall
+
+      dbh = get_dbh
+
+      dbh.prepare('DELETE FROM rooms WHERE id > 1000').execute
+      dbh.prepare('DELETE FROM strokes WHERE id > 41000').execute
+      dbh.prepare('DELETE FROM room_owners WHERE room_id > 1000').execute
+      dbh.prepare('DELETE FROM points WHERE id > 1443000').execute
+      dbh.prepare('DELETE FROM room_watchers WHERE room_id > 1000').execute
+      dbh.prepare('DELETE FROM room_watchers WHERE room_id > 1000').execute
+      dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
+
+      initialize_points(dbh)
     end
 
     post '/api/csrf_token' do
@@ -181,21 +269,17 @@ module Isuketch
       end
 
       strokes = get_strokes(dbh, room[:id], 0)
-      strokes.each do |stroke|
-        stroke[:points] = get_stroke_points(dbh, stroke[:id])
-      end
-      room[:strokes] = strokes
+      points_arr = get_points(strokes.map{|stroke| stroke[:id]})
 
       key = "#{room[:id]}:#{strokes.size}"
-
       body = '<?xml version="1.0" standalone="no"?>' +
         '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
 
       body += <<EOS
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="#{room[:canvas_width]}" height="#{room[:canvas_height]}" style="width:#{room[:canvas_width]}px;height:#{room[:canvas_height]}px;background-color:white;" viewBox="0 0 #{room[:canvas_width]} #{room[:canvas_height]}">
 EOS
-      strokes.each do |stroke|
-        points = get_stroke_points(dbh, stroke[:id])
+      strokes.each_with_index do |stroke, index|
+        points = points_arr[index]
         points_str = points.map do |point|
           x = (point[:x] == point[:x].to_i) ? point[:x].to_i : sprintf("%.4f", point[:x])
           y = (point[:y] == point[:y].to_i) ? point[:y].to_i : sprintf("%.4f", point[:y])
@@ -365,16 +449,7 @@ EOS
         stroke_id = dbh.last_id
         stmt.close
 
-        posted_stroke[:points].each do |point|
-          stmt = dbh.prepare(%|
-            INSERT INTO `points`
-            (`stroke_id`, `x`, `y`)
-            VALUES
-            (?, ?, ?)
-          |)
-          stmt.execute(stroke_id, point[:x], point[:y])
-          stmt.close
-        end
+        points = set_points(stroke_id, posted_stroke[:points])
       rescue
         dbh.query(%| ROLLBACK |)
         halt(500, {'Content-Type' => 'application/json'}, JSON.generate(
@@ -389,7 +464,7 @@ EOS
         FROM `strokes`
         WHERE `id`= ?
       |, [stroke_id])
-      stroke[:points] = get_stroke_points(dbh, stroke_id)
+      stroke[:points] = points
 
       content_type :json
       JSON.generate(
