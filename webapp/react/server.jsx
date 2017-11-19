@@ -12,6 +12,23 @@ import AsyncProps, { loadPropsOnServer } from 'async-props';
 import fetchJson from './util/fetch-json';
 import proxy from 'http-proxy-middleware';
 import Canvas from './components/Canvas';
+import SSRCaching from "react-ssr-caching";
+
+// SSR Cache
+const cacheConfig = {
+  components: {
+    "Room": {
+      strategy: "simple",
+      enable: true
+    },
+  },
+  lruCacheConfig: {
+    maxAge: 1000 * 60 * 60 // expired in 1 hour later
+  }
+}
+
+SSRCaching.enableCaching();
+SSRCaching.setCachingConfig(cacheConfig);
 
 // for material-ui https://www.npmjs.com/package/material-ui
 import injectTapEventPlugin from 'react-tap-event-plugin';
