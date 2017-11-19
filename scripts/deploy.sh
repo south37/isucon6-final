@@ -1,4 +1,4 @@
 #!/bin/bash
 
-"$HOME/deploy_nginx.sh"
-"$HOME/deploy_app.sh"
+"$HOME/scripts/deploy_nginx.sh"
+"$HOME/scripts/deploy_app.sh"
