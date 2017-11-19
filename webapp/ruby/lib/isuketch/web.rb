@@ -269,13 +269,8 @@ module Isuketch
 
       strokes = get_strokes(dbh, room[:id], 0)
       points_arr = get_points(strokes.map{|stroke| stroke[:id]})
-      strokes.each_with_index do |stroke, index|
-        stroke[:points] = points_arr[index]
-      end
-      room[:strokes] = strokes
 
       key = "#{room[:id]}:#{strokes.size}"
-
       body = '<?xml version="1.0" standalone="no"?>' +
         '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
 
@@ -283,7 +278,7 @@ module Isuketch
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="#{room[:canvas_width]}" height="#{room[:canvas_height]}" style="width:#{room[:canvas_width]}px;height:#{room[:canvas_height]}px;background-color:white;" viewBox="0 0 #{room[:canvas_width]} #{room[:canvas_height]}">
 EOS
       strokes.each do |stroke|
-        points = get_stroke_points(dbh, stroke[:id])
+        points = points_arr[index]
         points_str = points.map do |point|
           x = (point[:x] == point[:x].to_i) ? point[:x].to_i : sprintf("%.4f", point[:x])
           y = (point[:y] == point[:y].to_i) ? point[:y].to_i : sprintf("%.4f", point[:y])
@@ -454,7 +449,6 @@ EOS
         stmt.close
 
         points = set_points(stroke_id, posted_stroke[:points])
-        puts points
       rescue
         dbh.query(%| ROLLBACK |)
         halt(500, {'Content-Type' => 'application/json'}, JSON.generate(
