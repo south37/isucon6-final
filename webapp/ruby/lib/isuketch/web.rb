@@ -6,6 +6,7 @@ require 'sinatra/base'
 
 require 'redis'
 require 'faraday'
+require 'digest/md5'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
@@ -463,12 +464,13 @@ EOS
       room_id = params['id']
       dbh = get_dbh()
       room = get_room(dbh, room_id)
-      key = to_room_json(room)
+      room_json_str = to_room_json(room).to_json
+      key = Digest::MD5.hexdigest(room_json_str)
       cache = redis.get(key)
       return cache if cache
 
       res = react.get("rooms/#{room_id}")
-      html = res.body
+      html = res.body.force_encoding("UTF-8")
       redis.set(key, html)
       html
     end
