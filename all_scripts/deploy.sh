@@ -6,8 +6,23 @@ HOST3="54.250.245.52/"
 HOST4="54.199.141.147"
 HOST5="54.238.182.113"
 
-NGINX_HOSTS="${HOST2}"
-for i in ${WEB_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" 'hostname && git pull origin master && /home/isucon/scripts/deploy_nginx.sh'; done
+TARGET="master"
 
+if [ "$#" = 1 ]; then
+  echo "deploy $1..."
+  TARGET="$1"
+fi
+
+NGINX_COMMAND="hostname && git pull origin ${TARGET} && /home/isucon/scripts/deploy_nginx.sh"
+NGINX_HOSTS="${HOST2}"
+echo "Deploy nginx..."
+echo "COMMAND: ${NGINX_COMMAND}"
+for i in ${NGINX_HOSTS[@]}; do echo "" && echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${NGINX_COMMAND}"; done
+echo "Deployed nginx!"
+
+WEB_COMMAND="hostname && git pull origin ${TARGET} && /home/isucon/scripts/deploy_app.sh"
 WEB_HOSTS="${HOST1} ${HOST2} ${HOST4} ${HOST5}"
-for i in ${WEB_HOSTS[@]}; do echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" 'hostname && git pull origin master && /home/isucon/scripts/deploy_app.sh'; done
+echo "Deploy app..."
+echo "COMMAND: ${WEB_COMMAND}"
+for i in ${WEB_HOSTS[@]}; do echo "" && echo $i; ssh -i ${HOME}/.ssh/id_rsa "isucon@${i}" "${WEB_COMMAND}"; done
+echo "Deployed app!"
