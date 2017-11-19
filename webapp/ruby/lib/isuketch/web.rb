@@ -474,7 +474,7 @@ EOS
       cache = redis.get(key)
       if cache
         token = create_token
-        csrf_token = cache.token[:csrf_token]
+        csrf_token = token[:csrf_token]
         cache.gsub!(/"csrfToken": ".*"/, "\"csrfToken\": \"#{csrf_token}\"")
         return cache
       end
