@@ -6,7 +6,6 @@ require 'sinatra/base'
 
 require 'redis'
 require 'faraday'
-require 'digest/md5'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
@@ -545,9 +544,8 @@ EOS
 
       room_id = params['id']
       dbh = get_dbh()
-      room = get_room(dbh, room_id)
-      room_json_str = to_room_json(room).to_json
-      key = "room_html:#{Digest::MD5.hexdigest(room_json_str)}"
+      stroke_count = get_strokes(dbh, room_id, 0).count
+      key = "room_html:#{room_id},#{stroke_count}"
       cache = redis.get(key)
       if cache
         token = create_token
