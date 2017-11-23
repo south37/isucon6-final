@@ -44,4 +44,5 @@ res = c.post "/api/rooms" do |req|
   }.to_json
 end
 
+# get room
 c.get "/api/rooms/1"
