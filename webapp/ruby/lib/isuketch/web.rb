@@ -97,20 +97,9 @@ module Isuketch
       end
 
       def create_token
-        dbh = get_dbh
-        dbh.query(%|
-          INSERT INTO `tokens` (`csrf_token`)
-          VALUES
-          (SHA2(CONCAT(RAND(), UUID_SHORT()), 256))
-        |)
-
-        id = dbh.last_id
-        token = select_one(dbh, %|
-          SELECT `id`, `csrf_token`, `created_at`
-          FROM `tokens`
-          WHERE `id` = ?
-        |, [id])
-
+        token = (0...4).map { (65 + rand(26)).chr }.join
+        id = redis.incr "token_key"
+        redis.set "token:#{token}", "#{id},#{Time.now.to_i}"
         token
       end
 
@@ -155,12 +144,20 @@ module Isuketch
         }
       end
 
-      def check_token(dbh, csrf_token)
-        select_one(dbh, %|
-          SELECT `id`, `csrf_token`, `created_at` FROM `tokens`
-          WHERE `csrf_token` = ?
-            AND `created_at` > CURRENT_TIMESTAMP(6) - INTERVAL 1 DAY
-        |, [csrf_token])
+      def check_token(csrf_token)
+        data = redis.get "token:#{csrf_token}"
+        if data
+          id, created_at = data.split(",")
+          id = id.to_i
+          created_at = created_at.to_i
+          if (Time.now.to_i - created_at) < 60*60*24
+            {id: id, csrf_token: csrf_token, created_at: Time.at(created_at)}
+          else
+            nil
+          end
+        else
+          nil
+        end
       end
 
       def initialize_points(dbh)
@@ -352,7 +349,7 @@ EOS
 
     post '/api/rooms' do
       dbh = get_dbh
-      token = check_token(dbh, request.env['HTTP_X_CSRF_TOKEN'])
+      token = check_token(request.env['HTTP_X_CSRF_TOKEN'])
       unless token
         halt(400, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'トークンエラー。ページを再読み込みしてください。'
@@ -431,7 +428,7 @@ EOS
 
     post '/api/strokes/rooms/:id' do |id|
       dbh = get_dbh()
-      token = check_token(dbh, request.env['HTTP_X_CSRF_TOKEN'])
+      token = check_token(request.env['HTTP_X_CSRF_TOKEN'])
       unless token
         halt(400, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'トークンエラー。ページを再読み込みしてください。'
@@ -506,8 +503,8 @@ EOS
     get '/api/stream/rooms/:id', provides: 'text/event-stream' do |id|
       stream do |writer|
         dbh = get_dbh
-        token = check_token(dbh, request.params['HTTP_X_CSRF_TOKEN'])
-        token = check_token(dbh, request.params['csrf_token'])
+        token = check_token(request.params['HTTP_X_CSRF_TOKEN'])
+        token = check_token(request.params['csrf_token'])
         unless token
           logger.warn("---> mismatched token")
           writer << ("event:bad_request\n" + "data:トークンエラー。ページを再読み込みしてください。\n\n")
