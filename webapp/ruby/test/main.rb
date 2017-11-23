@@ -44,5 +44,21 @@ res = c.post "/api/rooms" do |req|
   }.to_json
 end
 
+room_id = JSON.parse(res.body)["room"]["id"]
+
 # get room
-c.get "/api/rooms/1"
+c.get "/api/rooms/#{room_id}"
+
+
+# post stroke
+res = c.post "/api/strokes/rooms/#{room_id}" do |req|
+  req.headers['X_CSRF_TOKEN'] = token
+  req.body = {
+    width: 200,
+    red: 255,
+    green: 255,
+    blue: 255,
+    alpha: 1,
+    points: [{ x: 1, y:1 }],
+  }.to_json
+end
