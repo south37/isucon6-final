@@ -64,3 +64,7 @@ name = "GET /api/stream/rooms/:id"
 [[bundle]]
 regexp = 'GET /rooms/[^/.]*'
 name = "GET /rooms/:id"
+
+[[bundle]]
+regexp = 'GET /api/rooms/[^/.]*'
+name = "GET /api/rooms/:id"
