@@ -69,23 +69,28 @@ module Isuketch
         stmt.close
       end
 
-      def create_room_db(dbh, params)
-        stmt = dbh.prepare(%|
-          INSERT INTO `rooms`
-          (`name`, `canvas_width`, `canvas_height`)
-          VALUES
-          (?, ?, ?)
-        |)
-        stmt.execute(parms[:name], params[:canvas_width], params[:canvas_height])
-        room_id = dbh.last_id
-        stmt.close
-        room_id
-      end
+      # def create_room_db(dbh, params)
+      #   stmt = dbh.prepare(%|
+      #     INSERT INTO `rooms`
+      #     (`name`, `canvas_width`, `canvas_height`)
+      #     VALUES
+      #     (?, ?, ?)
+      #   |)
+      #   stmt.execute(parms[:name], params[:canvas_width], params[:canvas_height])
+      #   room_id = dbh.last_id
+      #   stmt.close
+      #   room_id
+      # end
 
-      def create_room_redis(params)
+      def create_room_redis(name:, canvas_width:, canvas_height:)
         room_id = incr_room_id
-        params[:created_at] = Time.now
-        params[:id] = room_id
+        params = {
+          id: room_id,
+          name: name,
+          canvas_width: canvas_width,
+          canvas_height: canvas_height,
+          created_at: Time.now,
+        }
         redis.set(redis_room_key(room_id), serialize_room(params))
         room_id
       end
@@ -98,17 +103,27 @@ module Isuketch
         "room_id"
       end
 
-      def serialize_room(params)
-        params[:created_at] = params[:created_at].iso8601(6)
-        params.to_json
+      def serialize_room(id:, name:, canvas_width:, canvas_height:, created_at:)
+        {
+          id: id,
+          name: name,
+          canvas_width: canvas_width,
+          canvas_height: canvas_height,
+          created_at: created_at.iso8601(6),
+        }.to_json
       end
 
       def deserialize_room(json_str)
         return unless json_str
 
         json = json_parse(json_str)
-        json[:created_at] = Time.parse(json[:created_at])
-        json
+        {
+          id: json[:id],
+          name: json[:name],
+          canvas_width: json[:canvas_width],
+          canvas_height: json[:canvas_height],
+          created_at: Time.parse(json[:created_at])
+        }
       end
 
       def initialize_rooms(dbh)
