@@ -6,6 +6,7 @@ require 'sinatra/base'
 
 require 'redis'
 require 'faraday'
+require 'zlib'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
@@ -240,10 +241,6 @@ module Isuketch
         points
       end
 
-      def get_image(room_id)
-        redis.get "image:#{room_id}"
-      end
-
       def set_image(room_id, body)
         redis.set "/img/#{room_id}", body
       end
@@ -330,7 +327,16 @@ EOS
       body = body.gsub("\n", "")
       body += "</svg>"
 
-      set_image(room[:id], body)
+      zipped_body = StringIO.new.tap do |io|
+        gz = Zlib::GzipWriter.new(io)
+        begin
+          gz.write(body)
+        ensure
+          gz.close
+        end
+      end.string
+
+      set_image(room[:id], zipped_body)
 
       content_type 'image/svg+xml; charset=utf-8'
       etag key, kind: :weak
@@ -339,7 +345,8 @@ EOS
       else
         last_modified(room[:created_at])
       end
-      body
+      headers['Content-Encoding'] = 'gzip'
+      zipped_body
     end
 
     get '/api/rooms' do
