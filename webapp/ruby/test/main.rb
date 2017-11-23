@@ -4,6 +4,7 @@ require "active_support/notifications"
 require "logger"
 require "pry"
 require "json"
+require "diffy"
 
 url = 'http://localhost:9292'
 c = Faraday.new(url: url) do |faraday|
@@ -12,6 +13,7 @@ c = Faraday.new(url: url) do |faraday|
   faraday.adapter Faraday.default_adapter
 end
 
+req_id = 0
 logger = Logger.new(STDOUT)
 ActiveSupport::Notifications.subscribe('request.faraday') do |name, starts, ends, _, env|
   url = env[:url]
@@ -26,9 +28,17 @@ ActiveSupport::Notifications.subscribe('request.faraday') do |name, starts, ends
     logger.info "#{http_status} #{http_method} #{url} in #{time_ms}ms"
   end
 
-  filename = "#{http_method}#{env.url.path.gsub("/", "__")}"
+  filename = "#{req_id.to_s.rjust(2, "0")}__#{http_method}#{env.url.path.gsub("/", "__")}"
   filepath = File.expand_path("../fixtures/#{filename}", __FILE__)
-  File.write(filepath, res.body)
+  if File.exist?(filepath)
+    expected = File.read(filepath)
+    if res.body != expected
+      logger.info "\n" + Diffy::Diff.new(res.body, expected).to_s(:color)
+    end
+  else
+    File.write(filepath, res.body)
+  end
+  req_id += 1
 end
 
 
