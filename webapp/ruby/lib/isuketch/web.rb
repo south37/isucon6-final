@@ -117,7 +117,7 @@ module Isuketch
 
       def get_room(room_id)
         json = redis.get(redis_room_key(room_id))
-        json ? JSON.parse(json) : nil
+        json ? json_parse(json) : nil
       end
 
       def redis_room_key(room_id)
@@ -176,6 +176,7 @@ module Isuketch
       end
 
       def to_rfc_3339(dt)
+        dt = dt.respond_to?(:strftime) ? dt : Time.parse(dt)
         dt.strftime('%Y-%m-%dT%H:%M:%S.%6N%:z').
           sub(/\+00:00/, 'Z') # RFC3339では+00:00のときはZにするという仕様
       end
@@ -306,6 +307,11 @@ module Isuketch
         stmt.execute(room_id, csrf_token)
       ensure
         stmt.close
+      end
+
+
+      def json_parse(json_str)
+        JSON.parse(json_str, symbolize_names: true)
       end
     end
 
