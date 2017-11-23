@@ -84,6 +84,8 @@ module Isuketch
 
       def create_room_redis(params)
         room_id = incr_room_id
+        params[:created_at] = Time.now
+        params[:id] = room_id
         redis.set(redis_room_key(room_id), serialize_room(params))
         room_id
       end
@@ -99,6 +101,14 @@ module Isuketch
       def serialize_room(params)
         params[:created_at] = params[:created_at].iso8601(6)
         params.to_json
+      end
+
+      def deserialize_room(json_str)
+        return unless json_str
+
+        json = json_parse(json_str)
+        json[:created_at] = Time.parse(json[:created_at])
+        json
       end
 
       def initialize_rooms(dbh)
@@ -122,7 +132,7 @@ module Isuketch
 
       def get_room(room_id)
         json = redis.get(redis_room_key(room_id))
-        json ? json_parse(json) : nil
+        deserialize_room(json)
       end
 
       def redis_room_key(room_id)
@@ -430,7 +440,6 @@ EOS
       begin
         dbh.query(%|BEGIN|)
 
-        posted_room[:created_at] = Time.now
         room_id = create_room_redis(posted_room)
 
         stmt = dbh.prepare(%|
