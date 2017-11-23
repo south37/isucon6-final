@@ -6,6 +6,7 @@ require 'sinatra/base'
 
 require 'redis'
 require 'faraday'
+require 'pry'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
@@ -68,12 +69,89 @@ module Isuketch
         stmt.close
       end
 
-      def get_room(dbh, room_id)
+      # def create_room_db(dbh, params)
+      #   stmt = dbh.prepare(%|
+      #     INSERT INTO `rooms`
+      #     (`name`, `canvas_width`, `canvas_height`)
+      #     VALUES
+      #     (?, ?, ?)
+      #   |)
+      #   stmt.execute(parms[:name], params[:canvas_width], params[:canvas_height])
+      #   room_id = dbh.last_id
+      #   stmt.close
+      #   room_id
+      # end
+
+      def create_room_redis(name:, canvas_width:, canvas_height:)
+        room_id = incr_room_id
+        params = {
+          id: room_id,
+          name: name,
+          canvas_width: canvas_width,
+          canvas_height: canvas_height,
+          created_at: Time.now,
+        }
+        redis.set(redis_room_key(room_id), serialize_room(params))
+        room_id
+      end
+
+      def incr_room_id
+        redis.incr(redis_room_id_key)
+      end
+
+      def redis_room_id_key
+        "room_id"
+      end
+
+      def serialize_room(id:, name:, canvas_width:, canvas_height:, created_at:)
+        {
+          id: id,
+          name: name,
+          canvas_width: canvas_width,
+          canvas_height: canvas_height,
+          created_at: created_at.iso8601(6),
+        }.to_json
+      end
+
+      def deserialize_room(json_str)
+        return unless json_str
+
+        json = json_parse(json_str)
+        {
+          id: json[:id],
+          name: json[:name],
+          canvas_width: json[:canvas_width],
+          canvas_height: json[:canvas_height],
+          created_at: Time.parse(json[:created_at])
+        }
+      end
+
+      def initialize_rooms(dbh)
+        rooms = select_all(dbh, %|
+          SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
+          FROM `rooms`
+          ORDER BY `id`
+        |, [])
+        mset_args = rooms.map { |room| [redis_room_key(room[:id]), serialize_room(room)] }.flatten
+        redis.mset(*mset_args)
+        redis.set(redis_room_id_key, rooms.last[:id])
+      end
+
+      def get_room_db(dbh, room_id)
         select_one(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
           FROM `rooms`
           WHERE `id` = ?
         |, [room_id])
+      end
+
+      def get_room(room_id)
+        json = redis.get(redis_room_key(room_id))
+        deserialize_room(json)
+      end
+
+      def redis_room_key(room_id)
+        "room:#{room_id}"
       end
 
       def get_strokes(dbh, room_id, greater_than_id)
@@ -249,6 +327,11 @@ module Isuketch
         now = Time.now.to_f*1000
         redis.zadd "room_watchers:#{room_id}", now, csrf_token
       end
+
+
+      def json_parse(json_str)
+        JSON.parse(json_str, symbolize_names: true)
+      end
     end
 
     get '/initialize' do
@@ -265,6 +348,7 @@ module Isuketch
       dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
 
       initialize_points(dbh)
+      initialize_rooms(dbh)
     end
 
     post '/api/csrf_token' do
@@ -277,7 +361,7 @@ module Isuketch
 
     get '/img/:id' do |id|
       dbh = get_dbh()
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -329,7 +413,7 @@ EOS
       |, [])
 
       rooms = results.map {|res|
-        room = get_room(dbh, res[:room_id])
+        room = get_room(res[:room_id])
         room[:stroke_count] = get_strokes(dbh, room[:id], 0).size
         room
       }
@@ -360,15 +444,7 @@ EOS
       begin
         dbh.query(%|BEGIN|)
 
-        stmt = dbh.prepare(%|
-          INSERT INTO `rooms`
-          (`name`, `canvas_width`, `canvas_height`)
-          VALUES
-          (?, ?, ?)
-        |)
-        stmt.execute(posted_room[:name], posted_room[:canvas_width], posted_room[:canvas_height])
-        room_id = dbh.last_id
-        stmt.close
+        room_id = create_room_redis(posted_room)
 
         stmt = dbh.prepare(%|
           INSERT INTO `room_owners`
@@ -388,7 +464,7 @@ EOS
         stmt.close
       end
 
-      room = get_room(dbh, room_id)
+      room = get_room(room_id)
       content_type :json
       JSON.generate(
         room: to_room_json(room)
@@ -397,7 +473,7 @@ EOS
 
     get '/api/rooms/:id' do |id|
       dbh = get_dbh()
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -428,7 +504,7 @@ EOS
         ))
       end
 
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -505,7 +581,7 @@ EOS
           next
         end
 
-        room = get_room(dbh, id)
+        room = get_room(id)
         unless room
           writer << ("event:bad_request\n" + "data:この部屋は存在しません\n\n")
           writer.close
