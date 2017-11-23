@@ -84,11 +84,6 @@ module Isuketch
         "room_id"
       end
 
-      def get_room(dbh, room_id)
-        room_redis = get_room_redis(room_id)
-        room_redis ? room_redis : get_room_db(dbh, room_id)
-      end
-
       def initialize_rooms(dbh)
         rooms = select_all(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
@@ -108,7 +103,7 @@ module Isuketch
         |, [room_id])
       end
 
-      def get_room_redis(room_id)
+      def get_room(room_id)
         json = redis.get(redis_room_key(room_id))
         json ? JSON.parse(json) : nil
       end
@@ -314,7 +309,7 @@ module Isuketch
 
     get '/img/:id' do |id|
       dbh = get_dbh()
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -361,7 +356,7 @@ EOS
       |, [])
 
       rooms = results.map {|res|
-        room = get_room(dbh, res[:room_id])
+        room = get_room(res[:room_id])
         room[:stroke_count] = get_strokes(dbh, room[:id], 0).size
         room
       }
@@ -412,7 +407,7 @@ EOS
         stmt.close
       end
 
-      room = get_room(dbh, room_id)
+      room = get_room(room_id)
       content_type :json
       JSON.generate(
         room: to_room_json(room)
@@ -421,7 +416,7 @@ EOS
 
     get '/api/rooms/:id' do |id|
       dbh = get_dbh()
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -452,7 +447,7 @@ EOS
         ))
       end
 
-      room = get_room(dbh, id)
+      room = get_room(id)
       unless room
         halt(404, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'この部屋は存在しません。'
@@ -529,7 +524,7 @@ EOS
           next
         end
 
-        room = get_room(dbh, id)
+        room = get_room(id)
         unless room
           writer << ("event:bad_request\n" + "data:この部屋は存在しません\n\n")
           writer.close
