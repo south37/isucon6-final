@@ -100,7 +100,31 @@ module Isuketch
         token = (0...4).map { (65 + rand(26)).chr }.join
         id = redis.incr "token_key"
         redis.set "token:#{token}", "#{id},#{Time.now.to_i}"
-        token
+        {id: id, csrf_token: token}
+      end
+
+      def initialize_token(dbh)
+        tokens = dbh.prepare('SELECT * FROM tokens').execute
+        orgs = tokens.map do |token|
+          ["token:#{token[:csrf_token]}", "#{token[:id]},#{token[:created_at].to_i}"]
+        end.flatten
+        redis.mset *orgs
+      end
+
+      def check_token(csrf_token)
+        data = redis.get "token:#{csrf_token}"
+        if data
+          id, created_at = data.split(",")
+          id = id.to_i
+          created_at = created_at.to_i
+          if (Time.now.to_i - created_at) < 60*60*24
+            {id: id, csrf_token: csrf_token, created_at: Time.at(created_at)}
+          else
+            nil
+          end
+        else
+          nil
+        end
       end
 
       def to_room_json(room)
@@ -142,22 +166,6 @@ module Isuketch
           x: point[:x].to_f,
           y: point[:y].to_f,
         }
-      end
-
-      def check_token(csrf_token)
-        data = redis.get "token:#{csrf_token}"
-        if data
-          id, created_at = data.split(",")
-          id = id.to_i
-          created_at = created_at.to_i
-          if (Time.now.to_i - created_at) < 60*60*24
-            {id: id, csrf_token: csrf_token, created_at: Time.at(created_at)}
-          else
-            nil
-          end
-        else
-          nil
-        end
       end
 
       def initialize_points(dbh)
@@ -272,6 +280,7 @@ module Isuketch
       dbh.prepare('DELETE FROM tokens WHERE id > 50000').execute
 
       initialize_points(dbh)
+      initialize_token(dbh)
     end
 
     post '/api/csrf_token' do
