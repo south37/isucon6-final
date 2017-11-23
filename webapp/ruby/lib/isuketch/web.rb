@@ -156,7 +156,7 @@ module Isuketch
           FROM `room_owners`
         |, [])
 
-        mset_args = room_owners.map { |owner| [room_owner_key(owner[:id]), serialize_room_owner(owner)] }.flatten
+        mset_args = room_owners.map { |owner| [room_owner_key(owner[:room_id]), owner[:token_id]] }.flatten
         redis.mset(*mset_args)
       end
 
