@@ -430,6 +430,7 @@ EOS
       begin
         dbh.query(%|BEGIN|)
 
+        posted_room[:created_at] = Time.now
         room_id = create_room_redis(posted_room)
 
         stmt = dbh.prepare(%|
