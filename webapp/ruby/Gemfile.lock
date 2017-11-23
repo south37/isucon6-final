@@ -2,11 +2,16 @@ GEM
   remote: https://rubygems.org/
   specs:
     backports (3.6.8)
+    coderay (1.1.2)
     faraday (0.13.1)
       multipart-post (>= 1.2, < 3)
+    method_source (0.9.0)
     multi_json (1.12.1)
     multipart-post (2.0.0)
     mysql2 (0.4.4)
+    pry (0.11.3)
+      coderay (~> 1.1.0)
+      method_source (~> 0.9.0)
     puma (3.10.0)
     rack (1.6.4)
     rack-protection (1.5.3)
@@ -33,6 +38,7 @@ PLATFORMS
 DEPENDENCIES
   faraday
   mysql2
+  pry
   puma
   redis
   sinatra

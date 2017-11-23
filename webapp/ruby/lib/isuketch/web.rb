@@ -6,6 +6,7 @@ require 'sinatra/base'
 
 require 'redis'
 require 'faraday'
+require 'pry'
 
 Redis.current = Redis.new(host: ENV['REDIS_HOST'])
 
