@@ -84,7 +84,7 @@ module Isuketch
 
       def create_room_redis(params)
         room_id = incr_room_id
-        redis.set(redis_room_key(room_id), params.to_json)
+        redis.set(redis_room_key(room_id), serialize_room(params))
         room_id
       end
 
@@ -96,13 +96,18 @@ module Isuketch
         "room_id"
       end
 
+      def serialize_room(params)
+        params[:created_at] = params[:created_at].iso8601(6)
+        params.to_json
+      end
+
       def initialize_rooms(dbh)
         rooms = select_all(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
           FROM `rooms`
           ORDER BY `id`
         |, [])
-        mset_args = rooms.map { |room| [redis_room_key(room[:id]), room.to_json] }.flatten
+        mset_args = rooms.map { |room| [redis_room_key(room[:id]), serialize_room(room)] }.flatten
         redis.mset(*mset_args)
         redis.set(redis_room_id_key, rooms.last[:id])
       end
