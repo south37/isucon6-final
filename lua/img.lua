@@ -16,7 +16,7 @@ if not res then
 end
 if res == ngx.null then
   local res = ngx.location.capture("/proxy"..uri)
-  ngx.header.content_type = res.content_type
+  ngx.header["Content-Type"] = res.header["Content-Type"]
   ngx.status = res.status
   ngx.say(res.body)
   return
