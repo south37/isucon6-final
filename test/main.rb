@@ -43,3 +43,5 @@ res = c.post "/api/rooms" do |req|
     canvas_height: 800,
   }.to_json
 end
+
+c.get "/api/rooms/1"
