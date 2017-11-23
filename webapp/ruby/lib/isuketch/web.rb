@@ -240,6 +240,18 @@ module Isuketch
         points
       end
 
+      def get_image(room_id)
+        redis.get "image:#{room_id}"
+      end
+
+      def set_image(room_id, body)
+        redis.set "/img/#{room_id}", body
+      end
+
+      def del_image(room_id)
+        redis.del "/img/#{room_id}"
+      end
+
       def get_watcher_count(dbh, room_id)
         select_one(dbh, %|
           SELECT COUNT(*) AS `watcher_count`
@@ -285,7 +297,7 @@ module Isuketch
       )
     end
 
-    get '/img/:id' do |id|
+    get '/proxy/img/:id' do |id|
       dbh = get_dbh()
       room = get_room(dbh, id)
       unless room
@@ -317,6 +329,8 @@ EOS
       end
       body = body.gsub("\n", "")
       body += "</svg>"
+
+      set_image(room[:id], body)
 
       content_type 'image/svg+xml; charset=utf-8'
       etag key, kind: :weak
@@ -496,6 +510,8 @@ EOS
         WHERE `id`= ?
       |, [stroke_id])
       stroke[:points] = points
+
+      del_image(room[:id])
 
       content_type :json
       JSON.generate(
