@@ -13,7 +13,9 @@ if [ "$#" = 1 ]; then
   TARGET="$1"
 fi
 
-NGINX_COMMAND="hostname && git fetch origin ${TARGET} && git checkout ${TARGET} && git pull origin ${TARGET} && /home/isucon/scripts/deploy_nginx.sh"
+LOAD_COMMAND="git checkout master && git pull origin master && git fetch origin ${TARGET} && git checkout ${TARGET} && git pull origin ${TARGET} && git merge master"
+
+NGINX_COMMAND="hostname && ${LOAD_COMMAND} && /home/isucon/scripts/deploy_nginx.sh"
 NGINX_HOSTS="${HOST2}"
 echo "Deploy nginx..."
 echo "COMMAND: ${NGINX_COMMAND}"
@@ -25,7 +27,7 @@ done
 echo "Deployed nginx!"
 echo ""
 
-WEB_COMMAND="hostname && git fetch origin ${TARGET} && git checkout ${TARGET} && git pull origin ${TARGET} && /home/isucon/scripts/deploy_service.sh && /home/isucon/scripts/deploy_app.sh"
+WEB_COMMAND="hostname && ${LOAD_COMMAND} && /home/isucon/scripts/deploy_service.sh && /home/isucon/scripts/deploy_app.sh"
 WEB_HOSTS="${HOST1} ${HOST2} ${HOST4} ${HOST5}"
 echo "Deploy app..."
 echo "COMMAND: ${WEB_COMMAND}"
