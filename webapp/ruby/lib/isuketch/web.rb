@@ -148,6 +148,18 @@ module Isuketch
         redis.set(redis_room_id_key, rooms.last[:id])
       end
 
+      def initialize_room_owners(dbh)
+        room_owners = select_all(dbh, %|
+          SELECT
+            `room_id`,
+            `token_id`
+          FROM `room_owners`
+        |, [])
+
+        mset_args = room_owners.map { |owner| [room_owner_key(owner[:id]), serialize_room_owner(owner)] }.flatten
+        redis.mset(*mset_args)
+      end
+
       def get_room_db(dbh, room_id)
         select_one(dbh, %|
           SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`
@@ -370,6 +382,7 @@ module Isuketch
 
       initialize_points(dbh)
       initialize_rooms(dbh)
+      initialize_room_owners(dbh)
     end
 
     post '/api/csrf_token' do
