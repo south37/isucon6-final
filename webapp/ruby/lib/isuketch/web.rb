@@ -191,7 +191,6 @@ module Isuketch
       end
 
       def to_rfc_3339(dt)
-        dt = dt.respond_to?(:strftime) ? dt : Time.parse(dt)
         dt.strftime('%Y-%m-%dT%H:%M:%S.%6N%:z').
           sub(/\+00:00/, 'Z') # RFC3339では+00:00のときはZにするという仕様
       end
