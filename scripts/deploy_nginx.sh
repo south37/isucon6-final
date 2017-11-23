@@ -9,5 +9,5 @@ echo 'Update config file...'
 echo 'Updateed config file!'
 
 echo 'Restart nginx...'
-  echo "isucon" | sudo -S systemctl restart nginx.service
+  echo "isucon" | sudo -S systemctl restart openresty
 echo 'Restarted!'
