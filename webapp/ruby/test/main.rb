@@ -18,12 +18,17 @@ ActiveSupport::Notifications.subscribe('request.faraday') do |name, starts, ends
   http_method = env[:method].to_s.upcase
   time_sec = ends - starts
   time_ms = time_sec * 1000
-  http_status = env[:response].status
+  res = env[:response]
+  http_status = res.status
   if http_status > 200
     logger.error "#{http_status} #{http_method} #{url} in #{time_ms}ms"
   else
     logger.info "#{http_status} #{http_method} #{url} in #{time_ms}ms"
   end
+
+  filename = "#{http_method}#{env.url.path.gsub("/", "__")}"
+  filepath = File.expand_path("../fixtures/#{filename}", __FILE__)
+  File.write(filepath, res.body)
 end
 
 
