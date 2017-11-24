@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo journalctl -u isu.react.service
+echo "isucon" | sudo -S journalctl -u isu.react.service
