@@ -12,4 +12,4 @@ for i in ${NGINX_HOSTS[@]}; do
   ssh "isucon@${i}" "${COMMAND}"
 done
 
-git pull origin
+git pull origin `git branch | grep '\*' | awk '{ print \$2 }'`
