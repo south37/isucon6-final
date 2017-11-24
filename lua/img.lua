@@ -1,4 +1,4 @@
-local redis = require "resty.redis"
+local redis = require "redis"
 local red = redis:new()
 
 red:set_timeout(1000)
