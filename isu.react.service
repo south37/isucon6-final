@@ -7,6 +7,7 @@ WorkingDirectory=/home/isucon/webapp/react
 EnvironmentFile=/home/isucon/env.sh
 ExecStartPre=/usr/bin/npm run build
 ExecStart=/usr/bin/node build/server.js
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
