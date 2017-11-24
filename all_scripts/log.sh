@@ -24,7 +24,7 @@ done
 
 COMMAND="hostname"
 for t in ${TARGETS[@]}; do
-  COMMAND="${COMMAND} && ( /home/isucon/scripts/log_${t}.sh | tail -n ${TAIL_LENGTH} )"
+  COMMAND="${COMMAND} && echo '' && ( /home/isucon/scripts/log_${t}.sh | tail -n ${TAIL_LENGTH} )"
 done
 
 for i in ${HOSTS[@]}; do
