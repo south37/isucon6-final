@@ -4,7 +4,7 @@
 
 TAIL_LENGTH=10
 
-TARGETS="ruby react"
+TARGETS="nginx ruby react"
 
 while [ "$1" != "" ]; do
   case "$1" in

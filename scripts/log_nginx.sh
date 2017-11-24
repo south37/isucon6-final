@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo journalctl -u nginx.service
+echo "isucon" | sudo -S journalctl -u nginx.service
