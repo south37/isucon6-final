@@ -15,6 +15,7 @@
 # rotate_and_cp.sh
 # webapp/
 
+.npm
 .cloud-locale-test.skip
 .babel.json
 .v8flags.4.5.103.35.isucon.json
