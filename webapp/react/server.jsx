@@ -21,20 +21,9 @@ const apiBaseUrl = process.env.API;
 if (!apiBaseUrl) {
   throw 'Please set environment variable API=http://...';
 }
-if (!process.env.SSL_KEY) {
-  throw 'Please set environment variable SSL_KEY=/path/to/server.key';
-}
-if (!process.env.SSL_CERT) {
-  throw 'Please set environment variable SSL_CERT=/path/to/server.crt';
-}
 if (!process.env.REACT_PORT) {
   throw 'Please set environment variable REACT_PORT=...';
 }
-
-const options = {
-  key: fs.readFileSync(process.env.SSL_KEY),
-  cert: fs.readFileSync(process.env.SSL_CERT),
-};
 
 const app = express();
 
