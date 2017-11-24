@@ -27,7 +27,7 @@ for t in ${TARGETS[@]}; do
   COMMAND="${COMMAND} && echo '' && ( /home/isucon/scripts/log_${t}.sh | tail -n ${TAIL_LENGTH} )"
 done
 
-for i in ${HOSTS[@]}; do
+for i in ${WEB_HOSTS[@]}; do
   echo ""
   echo $i
   ssh "isucon@${i}" "${COMMAND}"
