@@ -4,17 +4,29 @@
 
 TAIL_LENGTH=10
 
-for OPT in "$@"; do
-  case $OPT in
+TARGETS="ruby react"
+
+while [ "$1" != "" ]; do
+  case "$1" in
     '-n' )
         TAIL_LENGTH=$2
         shift 2
         ;;
+    '-t' )
+        TARGETS=$2
+        shift 2
+        ;;
+    * )
+        shift 1
+        ;;
   esac
-  shift
 done
 
-COMMAND="hostname && ( /home/isucon/scripts/log_ruby.sh | tail -n ${TAIL_LENGTH} ) && ( /home/isucon/scripts/log_react.sh | tail -n ${TAIL_LENGTH} )"
+COMMAND="hostname"
+for t in ${TARGETS[@]}; do
+  COMMAND="${COMMAND} && ( /home/isucon/scripts/log_${t}.sh | tail -n ${TAIL_LENGTH} )"
+done
+
 for i in ${HOSTS[@]}; do
   echo ""
   echo $i
