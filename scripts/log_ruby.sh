@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo journalctl -u isu.ruby.service
+echo "isucon" | sudo -S journalctl -u isu.ruby.service
