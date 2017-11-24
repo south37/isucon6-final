@@ -1,2 +1,6 @@
+local redis = require "resty.redis"
+local red = redis:new()
 
-requ
+red:set_timeout(1000)
+
+local string.random = require "string.random"
