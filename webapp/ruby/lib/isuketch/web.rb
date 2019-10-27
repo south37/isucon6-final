@@ -317,24 +317,14 @@ module Isuketch
         points
       end
 
-      def get_watcher_count(dbh, room_id)
-        select_one(dbh, %|
-          SELECT COUNT(*) AS `watcher_count`
-          FROM `room_watchers`
-          WHERE `room_id` = ?
-            AND `updated_at` > CURRENT_TIMESTAMP(6) - INTERVAL 3 SECOND
-        |, [room_id])[:watcher_count].to_i
+      def get_watcher_count(room_id)
+        now = Time.now.to_f*1000
+        redis.zcount "room_watchers:#{room_id}", now-3000, now+1000
       end
 
-      def update_room_watcher(dbh, room_id, csrf_token)
-        stmt = dbh.prepare(%|
-          INSERT INTO `room_watchers` (`room_id`, `token_id`)
-          VALUES (?, ?)
-          ON DUPLICATE KEY UPDATE `updated_at` = CURRENT_TIMESTAMP(6)
-        |)
-        stmt.execute(room_id, csrf_token)
-      ensure
-        stmt.close
+      def update_room_watcher(room_id, csrf_token)
+        now = Time.now.to_f*1000
+        redis.zadd "room_watchers:#{room_id}", now, csrf_token
       end
 
 
@@ -494,7 +484,7 @@ EOS
         stroke[:points] = get_stroke_points(dbh, stroke[:id])
       end
       room[:strokes] = strokes
-      room[:watcher_count] = get_watcher_count(dbh, room[:id])
+      room[:watcher_count] = get_watcher_count(room[:id])
 
       # dbh.close  cache db connection, so close is unecessary
       content_type :json
@@ -597,8 +587,8 @@ EOS
           next
         end
 
-        update_room_watcher(dbh, room[:id], token[:id])
-        watcher_count = get_watcher_count(dbh, room[:id])
+        update_room_watcher(room[:id], token[:id])
+        watcher_count = get_watcher_count(room[:id])
 
         writer << ("retry:500\n\n" + "event:watcher_count\n" + "data:#{watcher_count}\n\n")
 
@@ -617,8 +607,8 @@ EOS
             last_stroke_id = stroke[:id]
           end
 
-          update_room_watcher(dbh, room[:id], token[:id])
-          new_watcher_count = get_watcher_count(dbh, room[:id])
+          update_room_watcher(room[:id], token[:id])
+          new_watcher_count = get_watcher_count(room[:id])
           if new_watcher_count != watcher_count
             watcher_count = new_watcher_count
             writer << ("event:watcher_count\n" + "data:#{watcher_count}\n\n")
