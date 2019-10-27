@@ -10,4 +10,8 @@ gem 'faraday'
 group :development do
   gem 'sinatra-contrib', require: nil
   gem 'pry'
+  gem 'faraday'
+  gem 'faraday_middleware'
+  gem 'activesupport'
+  gem 'diffy'
 end

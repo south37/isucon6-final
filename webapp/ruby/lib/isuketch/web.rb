@@ -68,6 +68,18 @@ module Isuketch
         stmt.close
       end
 
+      def create_room_owner(room_id:, token_id:)
+        redis.set(room_owner_key(room_id), token_id)
+      end
+
+      def room_owner_key(room_id)
+        "room_owners:#{room_id}"
+      end
+
+      def room_owned?(room_id, token_id)
+        redis.get(room_owner_key(room_id)) == token_id.to_s
+      end
+
       # def create_room_db(dbh, params)
       #   stmt = dbh.prepare(%|
       #     INSERT INTO `rooms`
@@ -134,6 +146,18 @@ module Isuketch
         mset_args = rooms.map { |room| [redis_room_key(room[:id]), serialize_room(room)] }.flatten
         redis.mset(*mset_args)
         redis.set(redis_room_id_key, rooms.last[:id])
+      end
+
+      def initialize_room_owners(dbh)
+        room_owners = select_all(dbh, %|
+          SELECT
+            `room_id`,
+            `token_id`
+          FROM `room_owners`
+        |, [])
+
+        mset_args = room_owners.map { |owner| [room_owner_key(owner[:room_id]), owner[:token_id]] }.flatten
+        redis.mset(*mset_args)
       end
 
       def get_room_db(dbh, room_id)
@@ -358,6 +382,7 @@ module Isuketch
 
       initialize_points(dbh)
       initialize_rooms(dbh)
+      initialize_room_owners(dbh)
     end
 
     post '/api/csrf_token' do
@@ -451,26 +476,12 @@ EOS
 
       room_id = nil
       begin
-        dbh.query(%|BEGIN|)
-
         room_id = create_room_redis(posted_room)
-
-        stmt = dbh.prepare(%|
-          INSERT INTO `room_owners`
-          (`room_id`, `token_id`)
-          VALUES
-          (?, ?)
-        |)
-        stmt.execute(room_id, token[:id])
+        create_room_owner(room_id: room_id, token_id: token[:id])
       rescue
-        dbh.query(%|ROLLBACK|)
         halt(500, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'エラーが発生しました。'
         ))
-      else
-        dbh.query(%|COMMIT|)
-      ensure
-        stmt.close
       end
 
       room = get_room(room_id)
@@ -529,12 +540,7 @@ EOS
 
       stroke_count = get_strokes(dbh, room[:id], 0).count
       if stroke_count == 0
-        count = select_one(dbh, %|
-          SELECT COUNT(*) as cnt FROM `room_owners`
-          WHERE `room_id` = ?
-            AND `token_id` = ?
-        |, [room[:id], token[:id]])[:cnt].to_i
-        if count == 0
+        unless room_owned?(room[:id], token[:id])
           halt(400, {'Content-Type' => 'application/json'}, JSON.generate(
             error: '他人の作成した部屋に1画目を描くことはできません'
           ))
@@ -556,7 +562,7 @@ EOS
         stmt.close
 
         points = set_points(stroke_id, posted_stroke[:points])
-      rescue
+      rescue => e
         dbh.query(%| ROLLBACK |)
         halt(500, {'Content-Type' => 'application/json'}, JSON.generate(
           error: 'エラーが発生しました。'
