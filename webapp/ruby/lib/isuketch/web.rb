@@ -7,8 +7,6 @@ require 'sinatra/base'
 require 'redis'
 require 'faraday'
 
-Redis.current = Redis.new(host: ENV['REDIS_HOST'])
-
 module Isuketch
   class Web < ::Sinatra::Base
     JSON.load_default_options[:symbolize_names] = true
@@ -26,7 +24,8 @@ module Isuketch
       end
 
       def redis
-        @redis ||= Redis.current
+        Thread.current[:redis] ||=
+          Redis.new(host: ENV['REDIS_HOST'])
       end
 
       def get_dbh
@@ -50,10 +49,6 @@ module Isuketch
           mysql.query_options.update(symbolize_keys: true)
           mysql
         end
-      end
-
-      def redis
-        @redis ||= Redis.current
       end
 
       def select_one(dbh, sql, binds)
